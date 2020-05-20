@@ -1,6 +1,8 @@
-"""Author: Rajan Subramanian
-   Created May 04/2020
-   Todo - add a copy from and time profiler 
+"""
+PostGresSQL python Interface for interacting with Dbeaver DB
+Author: Rajan Subramanian
+Created May 10 2020
+Todo - add a copy from and time profiler 
 """
 import psycopg2, os, time, pandas as pd
 from functools import wraps
@@ -9,25 +11,24 @@ from psycopg2.extras import execute_values, DictCursor, execute_batch
 from typing import Iterator, List, Dict, Any
 
 
-
 class DbReader:
     """Establishes a sql connection with the PostGres Database
     params:
     None
     Attributes:
-    dbconn (conn) connection objevct for psycopg2
+    conn (conn) connection objevct for psycopg2
     """
+
     def __init__(self):
         self.conn = None
 
-    def _read_db_config(self, section: str = 'postgresql-dev'):
+    def _read_db_config(self, section: str = 'postgresql-dev') -> Dict:
         """
         Reads the database configuration from config.ini file
         Args:
-        filename (string) file where database connection is stored (config.ini)
-        section: (string) one of postgressql-dev or postgresql-prod
+        section: one of postgressql-dev or postgresql-prod
         Returns:
-        config (dict)
+        DataBase Configuration
         """
         # create the parser
         filename = 'config.ini'
@@ -65,7 +66,6 @@ class DbReader:
                 print(error)
             else:
                 return self.conn
-    
 
     def fetch(self, query: str, hide: bool = True, section: str = 'dev'):
         """Returns the data associated with table
@@ -104,7 +104,7 @@ class DbReader:
 
     def push(self, data: Iterator[Dict[str, Any]], table_name: str, columns: List[str], section: str = 'dev') -> None:
         try:
-            self.connect()
+            self.connect(section)
             with self.conn.cursor() as curr:
                 # get the column names
                 col_names = ",".join(columns)
@@ -158,7 +158,6 @@ class DbReader:
         Returns:
         Table (DataFrame)
         """
-        self.connect(section)
         query = f"""select * from {table_name}"""
         if limit:
             query += f" " + f"""limit {limit}"""
@@ -171,14 +170,11 @@ class DbReader:
           table schema is retained
         """
         query = f'delete from {table_name};'
-        conn = self.connect(section)
-        self.execute(query, dev_conn)
-        conn.commit()
-        conn.close()
+        self.execute(query, section)
 
-    def execute(self, query):
+    def execute(self, query: str, section: str = 'dev'):
         try:
-            self.connect()
+            self.connect(section)
             with self.conn.cursor() as curr:
                 curr.execute(query)
             self.conn.commit()
