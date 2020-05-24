@@ -3,7 +3,8 @@ Author: Rajan Subramanian
 Created: May 23, 2020
 """
 
-import numpy as np 
+import numpy as np
+from scipy.linalg import solve_triangular 
 from abc import ABCMeta, abstractmethod
 
 
@@ -39,9 +40,32 @@ class LinearRegression(Base):
         else:
             return X
 
-    def fit(X: np.ndarray, y: np.ndarray, method: str='ols') -> 'LinearRegression':
+    def estimate_params(self, A: np.ndarray, b: np.ndarray, method: str='ols-qr') -> np.ndarray:
+        """numerically solves Ax = b where x is the parameters to be determined
+        based on ||Ax - b||
+        Args: 
+        A: coefficient matrix, (n_samples, n_features)
+        b: target values (n_samples, 1)
+        """
+        if method == 'ols':
+            # based on (A'A)^-1 A'b = x
+            return np.dot(np.dot(np.linalg.inv(A.T.dot(A)), A.T), b)
+        elif method == 'ols-qr':
+            # min||Ax-b|| = min||Q'(QRx - b)|| = min||(Rx - Q'b)
+            q, r = np.linalg.qr(A)
+            target = q.T.dot(b)
+            # solves by forward substitution
+            return solve_triangular(r, target)
+        elif method == 'ols-levenberg-marqdt':
+            raise NotImplementedError("Not yet Implemented")
+        elif method == 'mle':
+            raise NotImplementedError("Not yet Implemented")
+
+
+
+    def fit(self, X: np.ndarray, y: np.ndarray, method: str='ols-qr') -> 'LinearRegression':
         """fits training data via ordinary least Squares (ols)
-            given by: theta = (X'X)^-1 X'y
+            ||theta'X - y||
 
         Args:
         X: shape = (n_samples, p_features)
@@ -51,20 +75,26 @@ class LinearRegression(Base):
                     Target values
 
         method: 
-            the fitting procedure, default to computing matrix inverse
+            the fitting procedure, default to QR decomposition
 
         Returns:
         object
         """
-        n = X.shape[0]
+        n, p = X.shape[0], X.shape[1]
         X = self.make_constant(X)
-        self.theta = np.dot(np.dot(np.linalg.inv(X.T.dot(X)), X.T), y)
-        self.errors = ((y - self.predict(X))**2)
-        self.rss = self.errors.sum() 
-        self.standard_error = np.sqrt(self.rss / (n - 2))
-        self.covar = (self.standard_error ** 2) * np.inv(X.T.dot(X))
+        self.theta = self.estimate_params(A=X, b=y, method=method)
+        """
+        self.resid = (y - self.predict(X))
+        self.rss = (self.resid**2).sum()
+        self.s2 = self.rss / (n - p)"""
         return self
 
     def predict(self, X: np.ndarray):
         return np.dot(self.theta, X)
 
+    def get_residual_diagnostics(self, X: np.ndarray, y: np.ndarray) -> 'LinearRegression':
+        """returns the residual diagnostics from fitting process"""
+
+        self.rss = (self.resid**2).sum() 
+        self.s2 = self.rss / (n - p)
+        self.covar = (self.standard_error ** 2) * np.inv(X.T.dot(X))
