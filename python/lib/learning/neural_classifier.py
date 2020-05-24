@@ -35,7 +35,7 @@ class Perception:
         y: shape = {n_samples, 1}
                     Target values
 
-        Returns: 
+        Returns:
         object
         """
         # random number gen seed to reproduce values if needed
@@ -135,7 +135,21 @@ class AdalineGD:
         # initialize weights from normal distribution
         self.w = rgen.normal(loc=0.0, scale=0.01, size=1+X.shape[1])
         self.cost = []
-        return 
+        for _ in range(self.n_iter):
+            # calculate net input
+            net_input = self.net_input(X)
+            # calculate the linear activation function phi(z) = w'x = z
+            output = self.activation(net_input)
+            errors = y - output 
+            # update the weights
+            self.w[1:] += eta * X.T.dot(errors)
+            self.w[0] += eta * errors.sum()
+            # sse based on J(w) = 1/2 sum(yi - yhat)**2
+            cost = (errors**2).sum() / 2.0 
+            self.cost.append(cost)
+        return self 
+
+
 
     def net_input(self, X: np.ndarray) -> np.ndarray:
         """computes the net input vector
@@ -151,4 +165,24 @@ class AdalineGD:
         return np.dot(X, self.w[1:]) + self.w[0]
 
     def activation(self, X: np.ndarray) -> np.ndarray:
-        raise NotImplementedError("not implemented yet")
+        """compute linear activation z = w'x = phi(z)
+        Args: 
+        X: shape = {n_samples, n_features}
+        
+        Returns:
+        the input by itself
+        """
+        return X
+
+    def predict(self, X: np.ndarray) -> float:
+        """
+        computes the classifier phi(z) 
+        where phi(z) = 1 if z:= w'x >=0, -1 otherwise
+
+        Args:
+        X: shape {n_samples, p_features}
+
+        Returns:
+        classifier with value +1 or -1
+        """
+        return np.where(self.activation(self.net_input(X)) > 0, 1, -1)
