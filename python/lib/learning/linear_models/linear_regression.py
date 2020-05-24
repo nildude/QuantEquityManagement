@@ -25,9 +25,25 @@ class LinearRegression(Base):
     Args:
        None
 
-       Attributes:
-       theta:           Coefficient Weights after fitting
-       errors:          Number of Incorrect Predictions
+    Attributes:
+    theta:           Coefficient Weights after fitting
+    errors:          Number of Incorrect Predictions
+
+    Notes:
+    Class uses multiple estimation methods to estimate the oridiinary
+    lease squares problem min ||Ax - b||.  
+    - A naive implementation of (A'A)^-1 A'b = x is given
+      but computing an inverse is expensive
+    - A implementation based on QR decomposition is given based on
+        min||Ax-b|| = min||Q'(QRx - b)|| = min||(Rx - Q'b)
+        based on decomposing nxp matrix A = QR, Q is orthogonal, R is upper triangular
+    - A cholesky implementation is also included based on converting a n x p
+        into a pxp matrix: A'A = A'b, then letting M = A'A & y = A'b, 
+        then we need to solve Mx = y.  Leting M = U'U, we can solve this via forward sub
+    Todo
+    - Maximum Likelihood estimate of the parameters
+    - Levenberg-Marquardt Algorithm
+
     """
 
     def __init__(self, fit_intercept: bool=True):
@@ -49,13 +65,17 @@ class LinearRegression(Base):
         """
         if method == 'ols':
             # based on (A'A)^-1 A'b = x
-            return np.dot(np.dot(np.linalg.inv(A.T.dot(A)), A.T), b)
+            return np.linalg.inv(A.T @ A) @ A.T @ b
         elif method == 'ols-qr':
-            # min||Ax-b|| = min||Q'(QRx - b)|| = min||(Rx - Q'b)
+            # min||(Rx - Q'b)
             q, r = np.linalg.qr(A)
-            target = q.T.dot(b)
             # solves by forward substitution
-            return solve_triangular(r, target)
+            return solve_triangular(r, q.T @ b)
+        elif method == 'ols-cholesky':
+            l = np.linalg.cholesky(A.T @ A)
+            y = solve_triangular(l, A.T @ b, lower=True)
+            return solve_triangular(l.T, y)
+
         elif method == 'ols-levenberg-marqdt':
             raise NotImplementedError("Not yet Implemented")
         elif method == 'mle':
@@ -63,7 +83,7 @@ class LinearRegression(Base):
 
 
 
-    def fit(self, X: np.ndarray, y: np.ndarray, method: str='ols-qr') -> 'LinearRegression':
+    def fit(self, X: np.ndarray, y: np.ndarray, method: str='ols-cholesky') -> 'LinearRegression':
         """fits training data via ordinary least Squares (ols)
             ||theta'X - y||
 
@@ -75,7 +95,8 @@ class LinearRegression(Base):
                     Target values
 
         method: 
-            the fitting procedure, default to QR decomposition
+            the fitting procedure, default to cholesky decomposition
+            options are 'ols-qr','ols'
 
         Returns:
         object
@@ -90,7 +111,7 @@ class LinearRegression(Base):
         return self
 
     def predict(self, X: np.ndarray):
-        return np.dot(self.theta, X)
+        return X @ self.theta
 
     def get_residual_diagnostics(self, X: np.ndarray, y: np.ndarray) -> 'LinearRegression':
         """returns the residual diagnostics from fitting process"""
