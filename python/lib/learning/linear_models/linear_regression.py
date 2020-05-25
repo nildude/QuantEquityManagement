@@ -83,9 +83,15 @@ class LinearRegression(Base):
         Returns: 
         Scaler value from loglikelihood function
         """
-        y_guess = self.predict(X, thetas=guess)
-        f = self._loglikelihood(true=y, guess=y_guess)
+        y_guess = self.predict(A, thetas=guess)
+        f = self._loglikelihood(true=b, guess=y_guess)
         return f
+
+    def _jacobian(self, guess: np.ndarray, A: np.ndarray, b: np.ndarray):
+        return (A.T @ (guess @ A.T - b))
+
+    def _hessian(self, guess: np.ndarray, A: np.ndarray, b: np.ndarray):
+        return (A.T @ (A @ guess[:, np.newaxis] - b) @ A)
     
     def _levenberg_marqdt(self):
         pass
@@ -111,12 +117,22 @@ class LinearRegression(Base):
             l = np.linalg.cholesky(A.T @ A)
             y = solve_triangular(l, A.T @ b, lower=True)
             return solve_triangular(l.T, y)
-        elif method == 'mle':
+        elif method == 'mle-bfgs':
             # generate random guess
             rng = np.random.RandomState(1)
             guess_params = rng.uniform(low=10, high=80, size=A.shape[1])
-            return minimize(self._objective_func, guess_params,
+            # doesn't require hessian
+            return minimize(self._objective_func, guess_params, 
+                jac=self._jacobian,
                 method='BFGS',options={'disp': True}, args=(A,b))
+        elif method == 'mle-newton_cg':
+            # generate random guess
+            rng = np.random.RandomState(1)
+            guess_params = rng.uniform(low=10, high=80, size=A.shape[1])
+            # hess is optional.  
+            return minimize(self._objective_func, guess_params, 
+                jac=self._jacobian,hess=self._hessian,
+                method='Newton-CG',options={'disp': True}, args=(A,b))
         elif method == 'ols-levenberg-marqdt':
             raise NotImplementedError("Not yet Implemented")
 
