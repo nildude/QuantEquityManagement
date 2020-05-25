@@ -4,7 +4,8 @@ Created: May 23, 2020
 """
 
 import numpy as np
-from scipy.linalg import solve_triangular 
+from scipy.linalg import solve_triangular
+from scipy.optimize import minimize
 from abc import ABCMeta, abstractmethod
 
 
@@ -40,6 +41,9 @@ class LinearRegression(Base):
     - A cholesky implementation is also included based on converting a n x p
         into a pxp matrix: A'A = A'b, then letting M = A'A & y = A'b, 
         then we need to solve Mx = y.  Leting M = U'U, we can solve this via forward sub
+    - A implementation of MLE based on BFGS algorithm is given.  Specifically, we are 
+        maximizing log(L(theta)):= L = -n/2 log(2pi * residual_std_error**2) - 0.5 ||Ax-b||
+        This is same as minimizing 0.5||Ax-b|| the cost function J.  
     Todo
     - Maximum Likelihood estimate of the parameters
     - Levenberg-Marquardt Algorithm
@@ -55,6 +59,18 @@ class LinearRegression(Base):
             return np.concatenate((ones, X), axis=1)
         else:
             return X
+
+    def _loglikelihood(self, true, guess):
+        error = true - guess
+        sigma_error = np.std(error)
+        return 0.5 * (error ** 2).sum()
+
+    def _objective_func(self, guess, X, y):
+        
+        y_guess = self.predict(X, thetas=guess)
+        f = self._loglikelihood(true=y, guess=y_guess)
+        return f
+        
 
     def estimate_params(self, A: np.ndarray, b: np.ndarray, method: str='ols-qr') -> np.ndarray:
         """numerically solves Ax = b where x is the parameters to be determined
@@ -79,7 +95,11 @@ class LinearRegression(Base):
         elif method == 'ols-levenberg-marqdt':
             raise NotImplementedError("Not yet Implemented")
         elif method == 'mle':
-            raise NotImplementedError("Not yet Implemented")
+            # generate random guess
+            rng = np.random.RandomState(1)
+            guess_params = rng.uniform(low=10, high=80, size=A.shape[1])
+            return minimize(self._objective_func, guess_params, method='BFGS', 
+                options={'disp': True}, args=(A,b))
 
 
 
@@ -101,7 +121,8 @@ class LinearRegression(Base):
         Returns:
         object
         """
-        n, p = X.shape[0], X.shape[1]
+        
+        
         X = self.make_constant(X)
         self.theta = self.estimate_params(A=X, b=y, method=method)
         """
@@ -110,8 +131,10 @@ class LinearRegression(Base):
         self.s2 = self.rss / (n - p)"""
         return self
 
-    def predict(self, X: np.ndarray):
-        return X @ self.theta
+    def predict(self, X: np.ndarray, thetas: np.ndarray):
+        if thetas.size == 0:
+            return X @ self.theta
+        return X @ thetas
 
     def get_residual_diagnostics(self, X: np.ndarray, y: np.ndarray) -> 'LinearRegression':
         """returns the residual diagnostics from fitting process"""
