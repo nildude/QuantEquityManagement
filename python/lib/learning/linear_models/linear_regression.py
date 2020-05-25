@@ -138,7 +138,9 @@ class LinearRegression(Base):
 
     def fit(self, X: np.ndarray, y: np.ndarray, method: str='ols-cholesky') -> 'LinearRegression':
         """fits training data via ordinary least Squares (ols)
-            ||theta'X - y||
+            A wrapper for estimate_params that computes
+            regression diagnostics as well
+        
 
         Args:
         X: 
