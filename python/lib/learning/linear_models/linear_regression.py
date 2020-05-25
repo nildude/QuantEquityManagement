@@ -41,18 +41,21 @@ class LinearRegression(Base):
 
     Notes:
     Class uses multiple estimation methods to estimate the oridiinary
-    lease squares problem min ||Ax - b||.  
+    lease squares problem min ||Ax - b||, where x = px1, A=nxp, b = nx1
     - A naive implementation of (A'A)^-1 A'b = x is given
       but computing an inverse is expensive
     - A implementation based on QR decomposition is given based on
         min||Ax-b|| = min||Q'(QRx - b)|| = min||(Rx - Q'b)
         based on decomposing nxp matrix A = QR, Q is orthogonal, R is upper triangular
-    - A cholesky implementation is also included based on converting a n x p
-        into a pxp matrix: A'A = A'b, then letting M = A'A & y = A'b, 
-        then we need to solve Mx = y.  Leting M = U'U, we can solve this via forward sub
+    - A cholesky implementation is also included based on converting an n x p
+        into a pxp matrix: A'A = A'b, then letting M = A'A & y = A'b, then we need to 
+        solve Mx = y.  Leting M = U'U, we solve this by forward/backward sub
     - A implementation of MLE based on BFGS algorithm is given.  Specifically, we are 
         maximizing log(L(theta)):= L = -n/2 log(2pi * residual_std_error**2) - 0.5 ||Ax-b||
-        This is same as minimizing 0.5||Ax-b|| the cost function J.  
+        This is same as minimizing 0.5||Ax-b|| the cost function J.
+        The jacobian for regression is given by A'(Ax - b) -> (px1) vector
+    - A implementation of MLE based on Newton-CG is provided.  The Hessian is: 
+        A'(Ax - b)A -> pxp matrix  
     Todo
     - Levenberg-Marquardt Algorithm
 
@@ -114,7 +117,7 @@ class LinearRegression(Base):
         b: 
             target values (n_samples, 1)
         """
-        if method == 'ols':
+        if method == 'ols-naive':
             # based on (A'A)^-1 A'b = x
             return np.linalg.inv(A.T @ A) @ A.T @ b
         elif method == 'ols-qr':
@@ -150,7 +153,6 @@ class LinearRegression(Base):
             A wrapper for estimate_params that computes
             regression diagnostics as well
         
-
         Args:
         X: 
             shape = (n_samples, p_features)
