@@ -45,7 +45,6 @@ class LinearRegression(Base):
         maximizing log(L(theta)):= L = -n/2 log(2pi * residual_std_error**2) - 0.5 ||Ax-b||
         This is same as minimizing 0.5||Ax-b|| the cost function J.  
     Todo
-    - Maximum Likelihood estimate of the parameters
     - Levenberg-Marquardt Algorithm
 
     """
@@ -65,19 +64,40 @@ class LinearRegression(Base):
         sigma_error = np.std(error)
         return 0.5 * (error ** 2).sum()
 
-    def _objective_func(self, guess, X, y):
-        
+    def _objective_func(self, guess: np.ndarray, A: np.ndarray, b: np.ndarray):
+        """the objective function to be minimized, returns estimated x for Ax=b
+        Args: 
+        guess: 
+            initial guess for paramter x
+            shape = {1, p_features}
+            p_features is the number of columns of design matrix A
+
+        A: 
+            the coefficient matrix
+            shape = {n_samples, n_features}
+
+        b: 
+            the response variable
+            shape = {n_samples, 1}
+
+        Returns: 
+        Scaler value from loglikelihood function
+        """
         y_guess = self.predict(X, thetas=guess)
         f = self._loglikelihood(true=y, guess=y_guess)
         return f
-        
+    
+    def _levenberg_marqdt(self):
+        pass
 
     def estimate_params(self, A: np.ndarray, b: np.ndarray, method: str='ols-qr') -> np.ndarray:
         """numerically solves Ax = b where x is the parameters to be determined
         based on ||Ax - b||
         Args: 
-        A: coefficient matrix, (n_samples, n_features)
-        b: target values (n_samples, 1)
+        A: 
+            coefficient matrix, (n_samples, n_features)
+        b: 
+            target values (n_samples, 1)
         """
         if method == 'ols':
             # based on (A'A)^-1 A'b = x
@@ -91,28 +111,27 @@ class LinearRegression(Base):
             l = np.linalg.cholesky(A.T @ A)
             y = solve_triangular(l, A.T @ b, lower=True)
             return solve_triangular(l.T, y)
-
-        elif method == 'ols-levenberg-marqdt':
-            raise NotImplementedError("Not yet Implemented")
         elif method == 'mle':
             # generate random guess
             rng = np.random.RandomState(1)
             guess_params = rng.uniform(low=10, high=80, size=A.shape[1])
-            return minimize(self._objective_func, guess_params, method='BFGS', 
-                options={'disp': True}, args=(A,b))
-
-
+            return minimize(self._objective_func, guess_params,
+                method='BFGS',options={'disp': True}, args=(A,b))
+        elif method == 'ols-levenberg-marqdt':
+            raise NotImplementedError("Not yet Implemented")
 
     def fit(self, X: np.ndarray, y: np.ndarray, method: str='ols-cholesky') -> 'LinearRegression':
         """fits training data via ordinary least Squares (ols)
             ||theta'X - y||
 
         Args:
-        X: shape = (n_samples, p_features)
-                    n_samples is number of instances i.e rows
-                    p_features is number of features
-        y: shape = (n_samples)
-                    Target values
+        X: 
+            shape = (n_samples, p_features)
+            n_samples is number of instances i.e rows
+            p_features is number of features
+        y: 
+            shape = (n_samples)
+            Target values
 
         method: 
             the fitting procedure, default to cholesky decomposition
