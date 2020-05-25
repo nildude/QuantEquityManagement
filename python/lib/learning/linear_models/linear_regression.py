@@ -7,7 +7,8 @@ import numpy as np
 from scipy.linalg import solve_triangular
 from scipy.optimize import minimize
 from abc import ABCMeta, abstractmethod
-
+from sklearn.datasets import make_regression
+from typing import Dict
 
 class Base(metaclass=ABCMeta):
     """Abstract Base class representing the Linear Model"""
@@ -18,6 +19,14 @@ class Base(metaclass=ABCMeta):
     @abstractmethod
     def predict(self):
         pass
+
+    def make_regression_example(self, n_samples: int=10000, n_features: int=5) -> Dict:
+        features, output, coef = make_regression(
+            n_samples=n_samples,
+            n_features=n_features,
+            n_informative=n_features, n_targets=1,
+            noise = 0.0, coef=True)
+        return dict(zip(['X','y','coef'], [features, output, coef]))
 
 
 class LinearRegression(Base):
