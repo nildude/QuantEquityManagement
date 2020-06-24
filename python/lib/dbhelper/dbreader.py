@@ -67,14 +67,14 @@ class DbReader:
             else:
                 return self.conn
 
-    def fetch(self, query: str, hide: bool = True, section: str = 'dev'):
+    def fetch(self, query: str, records: bool = False, section: str = 'dev'):
         """Returns the data associated with table
         Args:
         query:  database query parameter
-        hide:   to show status of call
+        records:   specify if the rows should be returned as records
 
         Returns:
-        dictionary of values from database
+        list of DictRows where each item is a dictionary
         """
 
         try:
@@ -85,16 +85,16 @@ class DbReader:
                 col_names = map(lambda x: x.name, curr.description)
                 # fetch the rows
                 rows = curr.fetchall()
-                records = dict(zip(col_names, rows)) if rows else dict.fromkeys(col_names, [])
+                recs = ({k:v for k,v in record.items()} for record in rows)
             self.conn.close()
         except psycopg2.DatabaseError as e:
             print(e)
         else:
-            return records
+            return rows if not records else recs
 
-    def fetchdf(self, query: str, hide: bool = True, section: str = 'dev'):
+    def fetchdf(self, query: str, section: str = 'dev'):
         """Returns a pandas dataframe of the db query"""
-        return pd.DataFrame(self.fetch(query, hide, section))
+        return pd.DataFrame(self.fetch(query, True, section))
 
     def iterator_from_df(self, datadf: pd.DataFrame) -> Iterator:
         """Convenience function to transform pandas dataframe to 
