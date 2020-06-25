@@ -8,7 +8,7 @@ import psycopg2, os, time, pandas as pd
 from functools import wraps
 from configparser import ConfigParser
 from psycopg2.extras import execute_values, DictCursor, execute_batch
-from typing import Iterator, List, Dict, Any
+from typing import Iterator, List, Tuple, Dict, Any
 
 
 class DbReader:
@@ -67,7 +67,11 @@ class DbReader:
             else:
                 return self.conn
 
-    def fetch(self, query: str, records: bool = False, section: str = 'dev'):
+    def _create_records(self, dictrow: List) -> Tuple:
+        """converts data obtained from db into list of dictionaries"""
+        return tuple({k:v for k,v in record.items()} for record in dictrow)
+
+    def fetch(self, query: str, section: str = 'dev'):
         """Returns the data associated with table
         Args:
         query:  database query parameter
@@ -82,19 +86,18 @@ class DbReader:
             with self.conn.cursor(cursor_factory=DictCursor) as curr:
                 curr.execute(query)
                 # get column names
-                col_names = map(lambda x: x.name, curr.description)
+                self.col_names = tuple(map(lambda x: x.name, curr.description))
                 # fetch the rows
                 rows = curr.fetchall()
-                recs = ({k:v for k,v in record.items()} for record in rows)
             self.conn.close()
         except psycopg2.DatabaseError as e:
             print(e)
         else:
-            return rows if not records else recs
+            return rows
 
     def fetchdf(self, query: str, section: str = 'dev'):
         """Returns a pandas dataframe of the db query"""
-        return pd.DataFrame(self.fetch(query, True, section))
+        return pd.DataFrame(self.fetch(query, section), columns=self.col_names)
 
     def iterator_from_df(self, datadf: pd.DataFrame) -> Iterator:
         """Convenience function to transform pandas dataframe to 
