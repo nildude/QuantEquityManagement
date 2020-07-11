@@ -1,15 +1,13 @@
-"""Generalized Linear Models
+"""Classical Linear Models
 Author: Rajan Subramanian
 Created: May 23, 2020
 """
-import os
 import numpy as np
 from learning.base import LinearBase
 from scipy.linalg import solve_triangular
 from scipy.optimize import minimize
 from typing import Dict, Union
 import matplotlib.pyplot as plt
-
 
 class LinearRegression(LinearBase):
     """
