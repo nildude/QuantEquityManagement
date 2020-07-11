@@ -30,6 +30,12 @@ class LogisticRegression(LinearBase):
     def __init__(self, fit_intercept: bool=True):
         self.fit_intercept = fit_intercept
     
+    def sigmoid(self, z):
+        return 1.0 / (1 + np.exp(-z))
+    
+    def sigmoid_prime(self, z):
+        return self.sigmoid(z) * (1 - self.sigmoid(z))
+    
     def fit(self, X: np.ndarray, y: np.ndarray, method: str='') -> 'LogisticRegression':
         """fits model to training data and returns regression coefficients
         Args:
