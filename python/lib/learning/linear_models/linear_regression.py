@@ -2,34 +2,16 @@
 Author: Rajan Subramanian
 Created: May 23, 2020
 """
-
+import os
 import numpy as np
+from learning.base import LinearBase
 from scipy.linalg import solve_triangular
 from scipy.optimize import minimize
-from abc import ABCMeta, abstractmethod
-from sklearn.datasets import make_regression
-from typing import Dict
-
-class Base(metaclass=ABCMeta):
-    """Abstract Base class representing the Linear Model"""
-    @abstractmethod
-    def fit(self):
-        pass
-
-    @abstractmethod
-    def predict(self):
-        pass
-
-    def make_regression_example(self, n_samples: int=10000, n_features: int=5) -> Dict:
-        features, output, coef = make_regression(
-            n_samples=n_samples,
-            n_features=n_features,
-            n_informative=n_features, n_targets=1,
-            noise = 0.0, coef=True)
-        return dict(zip(['X','y','coef'], [features, output, coef]))
+from typing import Dict, Union
+import matplotlib.pyplot as plt
 
 
-class LinearRegression(Base):
+class LinearRegression(LinearBase):
     """
     Implements the classic Linear Regression via ols
     Args:
@@ -63,13 +45,7 @@ class LinearRegression(Base):
 
     def __init__(self, fit_intercept: bool=True):
         self.fit_intercept = fit_intercept
-
-    def make_constant(self, X: np.ndarray) -> np.ndarray: 
-        if self.fit_intercept: 
-            ones = np.ones(shape=(X.shape[0], 1))
-            return np.concatenate((ones, X), axis=1)
-        else:
-            return X
+        self.theta = None
 
     def _loglikelihood(self, true, guess):
         error = true - guess
@@ -106,7 +82,7 @@ class LinearRegression(Base):
         return (A.T @ (A @ guess[:, np.newaxis] - b) @ A)
     
     def _levenberg_marqdt(self):
-        pass
+        raise NotImplementedError("Not yet Implemented")
 
     def estimate_params(self, A: np.ndarray, b: np.ndarray, method: str='ols-qr') -> np.ndarray:
         """numerically solves Ax = b where x is the parameters to be determined
@@ -157,14 +133,14 @@ class LinearRegression(Base):
         X: 
             shape = (n_samples, p_features)
             n_samples is number of instances i.e rows
-            p_features is number of features
+            p_features is number of features i.e columns
         y: 
             shape = (n_samples)
             Target values
 
         method: 
             the fitting procedure, default to cholesky decomposition
-            options are 'ols-qr','ols'
+            options are 'ols-qr','ols', 'mle-bfgs', 'mle_newton_cg'
 
         Returns:
         object
@@ -173,20 +149,38 @@ class LinearRegression(Base):
         
         X = self.make_constant(X)
         self.theta = self.estimate_params(A=X, b=y, method=method)
-        """
-        self.resid = (y - self.predict(X))
-        self.rss = (self.resid**2).sum()
-        self.s2 = self.rss / (n - p)"""
+        self.predictions = self.predict(X)
         return self
 
-    def predict(self, X: np.ndarray, thetas: np.ndarray):
-        if thetas.size == 0:
-            return X @ self.theta
+    def predict(self, X: np.ndarray,
+        thetas: Union[np.ndarray, None] = None) -> Union[np.ndarray, Dict]:
+        """makes predictions of response variable given input params
+        Args:
+        X: 
+            shape = (n_samples, p_features)
+            n_samples is number of instances
+            p_features is number of features 
+            - if fit_intercept is true, a ones column is needed
+        thetas:
+            if initialized to None:
+                uses estimated theta from fitting process
+            if array is given:
+                it serves as initial guess for optimization
+        
+        Returns:
+        predicted values:
+            shape = (n_samples, 1)
+        """
+        if thetas is None:
+            if isinstance(self.theta, np.ndarray):
+                return X @ self.theta
+            else:
+                return X @ self.theta['x']
         return X @ thetas
 
-    def get_residual_diagnostics(self, X: np.ndarray, y: np.ndarray) -> 'LinearRegression':
+    def get_residual_diagnostics(self) -> 'LinearRegression':
         """returns the residual diagnostics from fitting process"""
 
         self.rss = (self.resid**2).sum() 
         self.s2 = self.rss / (n - p)
-        self.covar = (self.standard_error ** 2) * np.inv(X.T.dot(X))
+
