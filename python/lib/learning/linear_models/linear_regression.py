@@ -13,11 +13,11 @@ class LinearRegression(LinearBase):
     """
     Implements the classic Linear Regression via ols
     Args:
-       None
+    fit_intercept: indicates if intercept is added or not
 
     Attributes:
     theta:           Coefficient Weights after fitting
-    errors:          Number of Incorrect Predictions
+    residuals:       Number of Incorrect Predictions
 
     Notes:
     Class uses multiple estimation methods to estimate the oridiinary
@@ -43,7 +43,6 @@ class LinearRegression(LinearBase):
 
     def __init__(self, fit_intercept: bool=True):
         self.fit_intercept = fit_intercept
-        self.theta = None
 
     def _loglikelihood(self, true, guess):
         error = true - guess
