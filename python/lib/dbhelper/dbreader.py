@@ -10,7 +10,6 @@ from configparser import ConfigParser
 from psycopg2.extras import execute_values, DictCursor, execute_batch
 from typing import Iterator, List, Tuple, Dict, Any
 
-
 class DbReader:
     """Establishes a sql connection with the PostGres Database
     params:
@@ -31,7 +30,7 @@ class DbReader:
         DataBase Configuration
         """
         # create the parser
-        filename = 'config.ini'
+        filename =  'config.ini'
 
         parser = ConfigParser()
         parser.read(filename)
@@ -68,7 +67,7 @@ class DbReader:
                 return self.conn
 
     def _create_records(self, dictrow: List) -> Tuple:
-        """converts data obtained from db into list of dictionaries"""
+        """converts data obtained from db into tuple of dictionaries"""
         return tuple({k:v for k,v in record.items()} for record in dictrow)
 
     def fetch(self, query: str, section: str = 'dev'):
@@ -186,5 +185,3 @@ class DbReader:
             print(e)
         else:
             return 
-
-        
