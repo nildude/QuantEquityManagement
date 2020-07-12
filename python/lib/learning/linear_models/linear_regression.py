@@ -1,4 +1,4 @@
-"""Classical Linear Models
+"""Implementation of Linear Regression using various fitting methods
 Author: Rajan Subramanian
 Created: May 23, 2020
 """
@@ -21,7 +21,8 @@ class LinearRegression(LinearBase):
 
     Notes:
     Class uses multiple estimation methods to estimate the oridiinary
-    lease squares problem min ||Ax - b||, where x = px1, A=nxp, b = nx1
+    lease squares problem min ||Ax - b||, where x = px1 is the paramer 
+    to be estimated, A=nxp matrix and b = nx1 vector is given
     - A naive implementation of (A'A)^-1 A'b = x is given
       but computing an inverse is expensive
     - A implementation based on QR decomposition is given based on
@@ -30,9 +31,114 @@ class LinearRegression(LinearBase):
     - A cholesky implementation is also included based on converting an n x p
         into a pxp matrix: A'A = A'b, then letting M = A'A & y = A'b, then we need to 
         solve Mx = y.  Leting M = U'U, we solve this by forward/backward sub
+    """
+
+    def __init__(self, fit_intercept: bool=True):
+        self.fit_intercept = fit_intercept
+    
+    def estimate_params(self, A: np.ndarray, b: np.ndarray, method: str='ols-qr') -> np.ndarray:
+        """numerically solves Ax = b where x is the parameters to be determined
+        based on ||Ax - b||
+        Args: 
+        A: 
+            coefficient matrix, (n_samples, n_features)
+        b: 
+            target values (n_samples, 1)
+        """
+        if method == 'ols-naive':
+            # based on (A'A)^-1 A'b = x
+            return np.linalg.inv(A.T @ A) @ A.T @ b
+        elif method == 'ols-qr':
+            # min||(Rx - Q'b)
+            q, r = np.linalg.qr(A)
+            # solves by forward substitution
+            return solve_triangular(r, q.T @ b)
+        elif method == 'ols-cholesky':
+            l = np.linalg.cholesky(A.T @ A)
+            y = solve_triangular(l, A.T @ b, lower=True)
+            return solve_triangular(l.T, y)
+
+
+    def fit(self, X: np.ndarray, y: np.ndarray, method: str='ols') -> 'LinearRegression':
+        """fits training data via ordinary least Squares (ols)
+        Args:
+        X: 
+            coefficient matrix, (n_samples, p_features)
+            n_samples is number of instances i.e rows
+            p_features is number of features i.e columns
+        y: 
+            shape = (n_samples)
+            Target values
+
+        method: 
+            the fitting procedure default to cholesky decomposition
+            Also supports 'ols-qr' for QR decomposition & 
+            'ols-naive'
+
+        Returns:
+        object
+        """
+        X = self.make_constant(X)
+        if method == 'ols-naive':
+            self.theta = np.linalg.inv(X.T @ X) @ X.T @ y
+        elif method == 'ols':
+            l = np.linalg.cholesky(X.T @ X)
+            v = solve_triangular(l, X.T @ y, lower=True)
+            self.theta = solve_triangular(l.T, v)
+        elif method == 'ols-qr':
+            # min||(Rx - Q'b)||
+            q, r = np.linalg.qr(X)
+            # solves by forward substitution
+            self.theta = solve_triangular(r, q.T @ y)
+        # make the predictions using estimated coefficients
+        self.predictions = self.predict(X)
+        return self
+
+    def predict(self, X: np.ndarray, thetas: Union[np.ndarray, None] = None) -> np.array:
+        """makes predictions of response variable given input params
+        Args:
+        X: 
+            shape = (n_samples, p_features)
+            n_samples is number of instances
+            p_features is number of features 
+            - if fit_intercept is true, a ones column is needed
+        thetas:
+            if initialized to None:
+                uses estimated theta from fitting process
+            if array is given:
+                makes prediction from given thetas
+        
+        Returns:
+        predicted values:
+            shape = (n_samples,)
+        """
+        if thetas is None: 
+            return X @ self.theta
+        return X @ thetas
+
+    def get_residual_diagnostics(self) -> 'LinearRegression':
+        """returns the residual diagnostics from fitting process"""
+
+        self.rss = (self.resid**2).sum() 
+        self.s2 = self.rss / (n - p)
+
+
+class LinearRegressionMLE(LinearBase):
+    """
+    Implements linear regression via Maximum Likelihood Estimate
+    Args:
+    fit_intercept: indicates if intercept is added or not
+
+    Attributes:
+    theta:           Coefficient Weights after fitting
+    residuals:       Number of Incorrect Predictions
+
+    Notes:
+    Class uses multiple estimation methods to estimate the oridiinary
+    lease squares problem min ||Ax - b||, where x = px1, A=nxp, b = nx1
     - A implementation of MLE based on BFGS algorithm is given.  Specifically, we are 
         maximizing log(L(theta)):= L = -n/2 log(2pi * residual_std_error**2) - 0.5 ||Ax-b||
-        This is same as minimizing 0.5||Ax-b|| the cost function J.
+        This is same as minimizing 0.5||Ax-b||, the cost function J.
         The jacobian for regression is given by A'(Ax - b) -> (px1) vector
     - A implementation of MLE based on Newton-CG is provided.  The Hessian is: 
         A'(Ax - b)A -> pxp matrix  
@@ -81,50 +187,8 @@ class LinearRegression(LinearBase):
     def _levenberg_marqdt(self):
         raise NotImplementedError("Not yet Implemented")
 
-    def estimate_params(self, A: np.ndarray, b: np.ndarray, method: str='ols-qr') -> np.ndarray:
-        """numerically solves Ax = b where x is the parameters to be determined
-        based on ||Ax - b||
-        Args: 
-        A: 
-            coefficient matrix, (n_samples, n_features)
-        b: 
-            target values (n_samples, 1)
-        """
-        if method == 'ols-naive':
-            # based on (A'A)^-1 A'b = x
-            return np.linalg.inv(A.T @ A) @ A.T @ b
-        elif method == 'ols-qr':
-            # min||(Rx - Q'b)
-            q, r = np.linalg.qr(A)
-            # solves by forward substitution
-            return solve_triangular(r, q.T @ b)
-        elif method == 'ols-cholesky':
-            l = np.linalg.cholesky(A.T @ A)
-            y = solve_triangular(l, A.T @ b, lower=True)
-            return solve_triangular(l.T, y)
-        elif method == 'mle-bfgs':
-            # generate random guess
-            rng = np.random.RandomState(1)
-            guess_params = rng.uniform(low=10, high=80, size=A.shape[1])
-            # doesn't require hessian
-            return minimize(self._objective_func, guess_params, 
-                jac=self._jacobian,
-                method='BFGS',options={'disp': True}, args=(A,b))
-        elif method == 'mle-newton_cg':
-            # generate random guess
-            rng = np.random.RandomState(1)
-            guess_params = rng.uniform(low=10, high=80, size=A.shape[1])
-            # hess is optional.  
-            return minimize(self._objective_func, guess_params, 
-                jac=self._jacobian,hess=self._hessian,
-                method='Newton-CG',options={'disp': True}, args=(A,b))
-        elif method == 'ols-levenberg-marqdt':
-            raise NotImplementedError("Not yet Implemented")
-
-    def fit(self, X: np.ndarray, y: np.ndarray, method: str='ols-cholesky') -> 'LinearRegression':
-        """fits training data via ordinary least Squares (ols)
-            A wrapper for estimate_params that computes
-            regression diagnostics as well
+    def fit(self, X: np.ndarray, y: np.ndarray, method: str='mle_bfgs') -> 'LinearRegressionMLE':
+        """fits training data via maximum likelihood Estimate
         
         Args:
         X: 
@@ -136,8 +200,8 @@ class LinearRegression(LinearBase):
             Target values
 
         method: 
-            the fitting procedure, default to cholesky decomposition
-            options are 'ols-qr','ols', 'mle-bfgs', 'mle_newton_cg'
+            the fitting procedure default to 'mle-bfgs'
+            Also supports 'mle_newton_cg'
 
         Returns:
         object
@@ -145,7 +209,18 @@ class LinearRegression(LinearBase):
         
         
         X = self.make_constant(X)
-        self.theta = self.estimate_params(A=X, b=y, method=method)
+        # generate random guess
+        rng = np.random.RandomState(1)
+        guess_params = rng.uniform(low=0, high=10, size=X.shape[1])
+        if method == 'mle_bfgs':
+            # doesn't require hessian
+            self.theta = minimize(self._objective_func, guess_params, 
+            jac=self._jacobian, method='BFGS', options={'disp': True}, args=(X,y))
+        elif method == 'mle_newton_cg':
+            # hess is optional but speeds up the iterations
+            self.theta = minimize(self._objective_func, guess_params, 
+                jac=self._jacobian, hess=self._hessian,
+                method='Newton-CG', options={'disp': True}, args=(X, y))
         self.predictions = self.predict(X)
         return self
 
@@ -175,9 +250,11 @@ class LinearRegression(LinearBase):
                 return X @ self.theta['x']
         return X @ thetas
 
-    def get_residual_diagnostics(self) -> 'LinearRegression':
+    def get_residual_diagnostics(self) -> 'LinearRegressionMLE':
         """returns the residual diagnostics from fitting process"""
 
         self.rss = (self.resid**2).sum() 
         self.s2 = self.rss / (n - p)
 
+class LinearRegressionGD(LinearBase):
+    

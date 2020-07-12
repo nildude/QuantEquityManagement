@@ -16,7 +16,7 @@ class LinearBase(metaclass=ABCMeta):
     def predict(self):
         pass
 
-    def make_regression_example(self, n_samples: int=10000, n_features: int=5) -> Dict:
+    def make_regression_example(self, n_samples: int=1000, n_features: int=5) -> Dict:
         features, output, coef = make_regression(
             n_samples=n_samples,
             n_features=n_features,
@@ -31,5 +31,7 @@ class LinearBase(metaclass=ABCMeta):
         return X
 
     def reg_plot(self,x,y):
-        plt.scatter(x, y, c='steelblue', edgecolor='white', s=70)
-        plt.plot(x, self.predictions, color='yellow', lw=2)
+        plt.figure(figsize=(10,6))
+        plt.scatter(x, y, color='orange', s=70)
+        plt.plot(x, self.predictions, color='black', lw=2)
+        plt.title("Regression Plot")
