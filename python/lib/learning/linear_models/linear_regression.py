@@ -94,7 +94,7 @@ class LinearRegression(LinearBase):
         self.predictions = self.predict(X)
         return self
 
-    def predict(self, X: np.ndarray, thetas: Union[np.ndarray, None] = None) -> np.array:
+    def predict(self, X: np.ndarray, thetas: Union[np.ndarray, None] = None) -> np.ndarray:
         """makes predictions of response variable given input params
         Args:
         X: 
@@ -257,4 +257,54 @@ class LinearRegressionMLE(LinearBase):
         self.s2 = self.rss / (n - p)
 
 class LinearRegressionGD(LinearBase):
+    """Implements the ols regression via Gradient Descent
+       
+       Args:
+       eta:             Learning rate (between 0.0 and 1.0)
+       n_iter:          passees over the training set
+       random_state:    Random Number Generator seed
+                        for random weight initilization
+
+       Attributes:
+       theta:           Weights after fitting
+       residuals:       Number of incorrect predictions
+    """
+    def __init__(self, eta: float = 0.001, n_iter: int = 20, random_state: int = 1,
+    fit_intercept: bool = True):
+        self.eta = eta
+        self.n_iter = n_iter
+        self.random_state = random_state
+        self.fit_intercept = fit_intercept
     
+    def fit(self, X: np.ndarray, y: np.ndarray) -> 'LinearRegressionGD':
+        """fits training data
+        Args:
+        X: shape = {n_samples, p_features}
+                    n_samples is number of instances i.e rows
+                    p_features is number of features (the dimension of dataset)
+
+        y: shape = {n_samples,}
+                    Target values
+        
+        Returns:
+        object
+        """
+        n_samples, p_features = X.shape[0], X.shape[1]
+        self.theta = np.zeros(shape = 1 + p_features)
+        self.cost = []
+        X = self.make_constant(X)
+
+        for _ in range(self.n_iter):
+            # calculate the error
+            error = (y - self.predict(X))
+            self.theta += self.eta * X.T @ error / n_samples
+            self.cost.append((error.T @ error) / (2.0 * n_samples))
+        return self
+
+
+    def predict(self, X: np.ndarray, thetas: Union[np.ndarray, None] = None) -> np.ndarray:
+        if thetas is None: 
+            return X @ self.theta
+        return X @ thetas
+
+
