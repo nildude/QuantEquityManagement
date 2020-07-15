@@ -16,8 +16,14 @@ class LinearRegression(LinearBase):
     fit_intercept: indicates if intercept is added or not
 
     Attributes:
-    theta:           Coefficient Weights after fitting
-    residuals:       Number of Incorrect Predictions
+    theta:          Coefficient Weights after fitting
+    residuals:      Number of Incorrect Predictions
+    rss:            Residual sum of squares given by e'e
+    tss:            Total sum of squares
+    ess:            explained sum of squares
+    r2:             Rsquared or proportion of variance 
+    s2:             Residual Standard error or RSE           
+
 
     Notes:
     Class uses multiple estimation methods to estimate the oridiinary
@@ -59,7 +65,7 @@ class LinearRegression(LinearBase):
             return solve_triangular(l.T, y)
 
 
-    def fit(self, X: np.ndarray, y: np.ndarray, method: str='ols') -> 'LinearRegression':
+    def fit(self, X: np.ndarray, y: np.ndarray, method: str='ols', covar=False) -> 'LinearRegression':
         """fits training data via ordinary least Squares (ols)
         Args:
         X: 
@@ -69,6 +75,9 @@ class LinearRegression(LinearBase):
         y: 
             shape = (n_samples)
             Target values
+        covar: 
+            covariance matrix of fitted parameters i.e theta hat
+            set to True if desired
 
         method: 
             the fitting procedure default to cholesky decomposition
@@ -78,6 +87,7 @@ class LinearRegression(LinearBase):
         Returns:
         object
         """
+        n_samples, p_features = X.shape[0], X.shape[1]
         X = self.make_constant(X)
         if method == 'ols-naive':
             self.theta = np.linalg.inv(X.T @ X) @ X.T @ y
@@ -92,6 +102,16 @@ class LinearRegression(LinearBase):
             self.theta = solve_triangular(r, q.T @ y)
         # make the predictions using estimated coefficients
         self.predictions = self.predict(X)
+        self.residuals = (y - self.predictions)
+        self.rss = self.residuals @ self.residuals
+        # residual standard error RSE
+        self.s2 = self.rss / (n_samples - (p_features + self.fit_intercept))
+        ybar = y.mean()
+        self.tss = (y - ybar) @ (y - ybar)
+        self.ess = self.tss - self.rss 
+        self.r2 = self.ess / self.tss
+        if covar: 
+            self.param_covar = self._param_covar(X)
         return self
 
     def predict(self, X: np.ndarray, thetas: Union[np.ndarray, None] = None) -> np.ndarray:
@@ -115,12 +135,9 @@ class LinearRegression(LinearBase):
         if thetas is None: 
             return X @ self.theta
         return X @ thetas
-
-    def get_residual_diagnostics(self) -> 'LinearRegression':
-        """returns the residual diagnostics from fitting process"""
-
-        self.rss = (self.resid**2).sum() 
-        self.s2 = self.rss / (n - p)
+    
+    def _param_covar(self, X: np.ndarray) -> np.ndarray: 
+        return np.linalg.inv(X.T @ X) * self.s2
 
 
 class LinearRegressionMLE(LinearBase):
