@@ -201,18 +201,41 @@ class Cluster:
 class MinimumSpanningTrees:
     """Implementation of minimum spanning tree using Kruskal's algorithm
     Args: 
+    None
 
+    Attributes:
+    distance:   pandas DataFrame
 
     Returns: 
-
+    Minimum Spanning Tree using Kruskal's aglo
     """
     # -- Nested Price Class
     class Price:
+        """Get the prices from yahoo finance and calculates their distances
+        Args:
+        start: start date in format YYYY-MM-DD in string
+        end:   end date in format YYYY-MM-DD in string
+
+        Returns: 
+        distances calculated from correlation matrix (pandas object)
+
+        Notes: 
+        prices are downloaded from yahoo finance using yfinance module
+        log returns are calculated using the formula 
+            rt = log(1 + Rt) where Rt is the percentage return
+        Distances are calculated using the formula: 
+            dij = sqrt(2 * (1 - pij))
+        """
         def __init__(self, start, end):
             self.start = start 
             self.end = end 
         
         def get_prices(self, col='Adj Close'):
+            """gets the adjusted close price from yahoo finance
+            Args: 
+            col: string supported types are High, low, Adj Close
+            """
+            # - set ticker names here 
             ticker_names = """\
             TSLA SPY MSFT MMM ABBV ABMD ACN ATVI ADBE AMD 
             AES AFL APD AKAM ALB ARE ALLE GOOG AAL AMT
@@ -223,8 +246,15 @@ class MinimumSpanningTrees:
             return yf.download(ticker_names, start=self.start, end=self.end, progress=False)[col]
         
         def _calculate_correlation(self, prices):
+            """calculates the correlation given prices
+            Args: 
+            prices: pandas dataframe
+
+            Returns: 
+            correlation:  pandas dataframe
+            """
             return np.log(1 + prices.pct_change()).corr()
-        
+            
         def get_distance(self):
             """Computes the distance given correlation
                 dij := sqrt( 2(1 - pij) )
