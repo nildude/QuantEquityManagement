@@ -1,7 +1,7 @@
 """Module replicates the paper "A review of two decates of correlation, 
 hierarchies, networks and clustering in financial markets using minimum spanning trees
 Author: Rajan Subramanian
-Date: 07/16/2020
+Date: 07/16/2020d
 """
 
 import numpy as np 
