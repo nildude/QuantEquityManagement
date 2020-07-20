@@ -92,6 +92,11 @@ class Graph:
             """return value associated with this edge"""
             return self._value 
         
+        def get_items(self):
+            """returns edge attributes as a tuple
+            Helpful for visualizing nodes and their edge weights"""
+            return (self._start._value, self._end._value, self._value)
+        
         def __hash__(self):
             return hash((self._start, self._end))
     
@@ -317,7 +322,18 @@ class MinimumSpanningTrees:
             if a != b: 
                 tree.append(edge)
                 cluster.union(a, b)
-        return tree 
+        return tree
+    
+    def draw_graph(self, mst_tree):
+        import networkx as nx
+        import matplotlib.pyplot as plt 
+        g = nx.Graph()
+        # get the edge vertices and edge weights from mst_tree
+        items = (e.get_items() for e in mst_tree)
+        # add the edges in the networkx graph for plotting
+        g.add_weighted_edges_from(items)
+        nx.draw(g, with_labels=True);
+        plt.draw();
     
 
 
