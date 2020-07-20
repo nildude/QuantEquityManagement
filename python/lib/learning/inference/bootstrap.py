@@ -26,7 +26,7 @@ class Boot:
     def __init__(self):
         pass 
 
-    def empirical_bootstrap(self, pop_data: np.ndarray, n = None, B = 1000, func = None) -> np.ndarray:
+    def _sub_sample(self, pop_data: np.ndarray, n = None, B = 1000) -> np.ndarray:
         """returns the sample statistic from empirical bootstrap method
         Args:
         pop_data: the data from which we sample with replacement
@@ -39,8 +39,17 @@ class Boot:
         """
         n = pop_data.shape[0] if n is None else n
         for _ in range(B):
-            yield func(pop_data[np.random.randint(low=0, high=n, size=n)], axis=0)
+            yield pop_data[np.random.randint(low=0, high=n, size=n)]
         
-    def empirical_mean(self, estimates):
-        pass
+    def empirical_bootstrap(self, pop_data: np.ndarray, n = None, B = 1000, func=None):
+        for boot_sample in self._sub_sample(pop_data=pop_data, n=n, B=B):
+            yield func(boot_sample, axis=0)
+    
+    def get_bootstrap_stats(self, estimates):
+        total, n = 0.0, 0
+        for x in estimates:
+            total += x[0] 
+            n += 1 
+        return total / n
+        
         
