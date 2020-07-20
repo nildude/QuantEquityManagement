@@ -1,7 +1,7 @@
 """Module replicates the paper "A review of two decates of correlation, 
 hierarchies, networks and clustering in financial markets using minimum spanning trees
 Author: Rajan Subramanian
-Date: 07/16/2020d
+Date: 07/16/2020
 """
 
 import numpy as np 
@@ -325,6 +325,13 @@ class MinimumSpanningTrees:
         return tree
     
     def draw_graph(self, mst_tree):
+        """Plots the minimum spanning tree
+        Args: 
+        mst_tree:  list of tree objects with minimum edges from Edge Class
+        
+        Returns: 
+        None:       plot object containing the MST
+        """
         import networkx as nx
         import matplotlib.pyplot as plt 
         g = nx.Graph()
