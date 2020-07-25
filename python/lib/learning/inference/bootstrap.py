@@ -5,7 +5,8 @@ Created: July 15, 2020
 """
 import numpy as np
 from typing import Union
-import matplotlib.pyplot as plt  
+import matplotlib.pyplot as plt 
+import pandas as pd  
 
 class Boot:
     """
