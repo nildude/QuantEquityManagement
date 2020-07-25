@@ -21,8 +21,13 @@ class Boot:
     Class implements various statistical estimators such as sample mean, 
     sample variance, sample covariance, confidence intervals associated with 
     these estimates and the standard error via random sampling with replacement
-    - A implementation of bootstrapped mean and variance is given
-    - A implementation of bootstrapped estimates from standard regression is given
+    - A implementation of empirical bootstrap for estimating paramaters is given
+    - A implementation of residual regression bootstrap is given namely: 
+        - Get predicted response yhat_i from full data using regression
+        - Select bootstrap samples of residuals e_i, where i ranges from 1 to n
+        - Calculate bootstrapped yi values by computing yhat_i + e_i
+        - Regress bootstrapped yi values on fixed X values to obtain bootstrapped
+            regression coefficients
     """
     class _SubSample:
         """Class performs random sample with replacement for each bootstap 
@@ -35,6 +40,7 @@ class Boot:
 
             Returns: 
             iterator of population subsample
+
         """ 
         def __init__(self, pop_sample: np.ndarray, sample_size: np.ndarray, bsize: int):
             self.pop_sample = pop_sample
@@ -58,7 +64,7 @@ class Boot:
         Args:
         pop_data: the data from which we sample with replacement
         n:        the size of the subsample, if None, then uses length of data
-        B:        the number of bootstrap subsamples to create in order to estimate the statistic
+        B:        the number of bootstrap subsamples
         func:     the statistc we are interested
 
         Returns: 
@@ -73,6 +79,36 @@ class Boot:
         self.statistic = statistic
         self.stat_name = func.__name__
         return (mean, std_err)
+    
+    def bootstrap_regression(self, X: np.ndarray, n=None, B=1000, model=None):
+        """computes standard error from regression model using residual bootstrapping
+        Args:
+        X:      coefficient matrix, (n_samples, p_features)
+                n_samples is number of instances i.e rows
+                p_features is number of features i.e columns
+              
+        n:      the size of the subsample, if None, then use length of data
+        B:      the number of bootstrap
+        model:  the regression model object after fitting
+
+        Returns: 
+        standard error of coefficient estimates
+        """
+        residuals = model.residuals
+        predictions = model.predictions 
+        pop_data = np.concatenate((predictions, residuals), axis=1)
+        statistic = []
+        self.boot_est = {}  # to store the mean and std_err
+        for sub_sample in self._SubSample(pop_data, n, B):
+            boot_yi = sub_sample[:, 0] + sub_sample[:, 1]
+            model.fit(X, boot_yi)
+            statistic.append(tuple(model.theta))
+        self.boot_est['mean'] = np.mean(statistic, axis=0)
+        self.boot_est['std_err'] = np.std(statistic, ddof=1)
+        self.boot_est['sample_statistic'] = statistic 
+        self.stat_name = 'residual_bootstrap method'
+        return boot_est['std_err']
+
         
     def plot_hist(self):
         plt.title(f"""Histogram of Sample {self.stat_name}""")
