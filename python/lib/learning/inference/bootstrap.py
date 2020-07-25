@@ -97,19 +97,20 @@ class Boot:
         residuals = model.residuals
         predictions = model.predictions 
         pop_data = np.concatenate((predictions, residuals), axis=1)
-        statistic = []
-        self.boot_est = {}  # to store the mean and std_err
+        statistic = [None] * B
+        self.boot_est = {}  # to store the mean, std_err
+        idx = 0   # lcv
         for sub_sample in self._SubSample(pop_data, n, B):
             boot_yi = sub_sample[:, 0] + sub_sample[:, 1]
             model.fit(X, boot_yi)
-            statistic.append(tuple(model.theta))
+            statistic[idx] = tuple(model.theta)
+            idx += 1
         self.boot_est['mean'] = np.mean(statistic, axis=0)
         self.boot_est['std_err'] = np.std(statistic, ddof=1)
         self.boot_est['sample_statistic'] = statistic 
         self.stat_name = 'residual_bootstrap method'
         return boot_est['std_err']
 
-        
     def plot_hist(self):
         plt.title(f"""Histogram of Sample {self.stat_name}""")
         plt.hist(self.statistic, orientation='horizontal')
