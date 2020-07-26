@@ -22,13 +22,11 @@ class Boot:
     sample variance, sample covariance, confidence intervals associated with 
     these estimates and the standard error via random sampling with replacement
     - A implementation of empirical bootstrap for estimating paramaters is given
-    - A implementation of residual regression bootstrap is given namely: 
-        - Get predicted response yhat_i from full data using regression
-        - Select bootstrap samples of residuals e_i, where i ranges from 1 to n
-        - Calculate bootstrapped yi values by computing yhat_i + e_i
-        - Regress bootstrapped yi values on fixed X values to obtain bootstrapped
-            regression coefficients
+    - A implementation of empirical bootstrap for regression is given
+    - A implementation of residual bootstrap for regression
+    - Sequential Bootstrap-todo
     """
+    
     def __init__(self):
         pass 
         
