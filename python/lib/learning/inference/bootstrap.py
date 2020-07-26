@@ -42,16 +42,22 @@ class Boot:
         Returns: 
         bootstrapped estimate of the sample statistic
         """
-        statistic = []
+        # store the estimates for each bootstrapped sample
+        n = pop_data.shape[0] if n is None else n
+        boot_est = [None] * B
+        index = 0
         for _ in range(B):
             idx = np.random.randint(low=0, high=n, size=n)
-            sub_stat = func(pop_data[idx], axis=0)
-            statistic.append(sub_stat)
-        mean = np.mean(statistic)
-        std_err = np.std(statistic, ddof=1)
-        self.statistic = statistic
-        self.stat_name = func.__name__
-        return (mean, std_err)
+            est = func(pop_data[idx], axis=0)
+            boot_est[index] = est
+            index += 1
+        
+        result = {}
+        result['estimates'] = boot_est
+        result['est_mean'] = np.mean(boot_est)
+        result['est_err'] = np.std(boot_est, ddof=1)
+        
+        return result
     
     def residual_bootstrap(self, X: np.ndarray, y: np.ndarray, n=None, B=1000, model=None):
         """computes standard error from regression model using residual bootstrapping
@@ -63,27 +69,31 @@ class Boot:
               
         n:      the size of the subsample, if None, then use length of data
         B:      the number of bootstrap
-        model:  the regression model object after fitting
+        model:  the regression model object
 
         Returns: 
         standard error of coefficient estimates
         """
-        model.fit(X, y);
+        # fit the model if it hasn't been run
+        if model.run is False:
+            model.fit(X, y);
         resid = model.residuals
         pred = model.predictions
-        statistic = [None] * B
-        self.boot_est = {}  # to store the mean, std_err
+        boot_est = [None] * B
+        result = {}  # to store the mean, std_err
         index = 0   
         for _ in range(B):
             idx = np.random.randint(low=0, high=n, size=n)
             boot_yi = pred + resid[idx]
             model.fit(X, boot_yi)
-            statistic[index] = tuple(model.theta)
+            boot_est[index] = tuple(model.theta)
             index += 1
     
         #self.boot_est['std_err'] = np.std(statistic, ddof=1, axis=0)
-        self.boot_est['sample_statistic'] = statistic 
-        self.stat_name = 'residual_bootstrap method'
+        result['estimates'] = boot_est
+        result['est_mean'] = np.mean(boot_est, axis=0)
+        result['est_err'] = np.std(boot_est, ddof=1, axis=0)
+        return result
     
     def regression_bootstrap(self, X: np.ndarray, y: np.ndarray, n=None, B=1000, model=None):
         """computes empirical bootstrap for regression problem
@@ -97,19 +107,22 @@ class Boot:
         B:      the number of bootstrap
         model:  the regression model object
         """
-        model.fit(X, y);
+        boot_est = [None] * B
+        result = {}
+        if model.run is False:
+            model.fit(X, y);
         thetas = model.theta
-        statistic = [None] * B
         index = 0
         for _ in range(B):
             idx = np.random.randint(low=0, high=n, size=n)
             model.fit(X[idx], y[idx]);
-            statistic[index] = tuple(model.theta)
+            boot_est[index] = tuple(model.theta)
             index += 1
-        self.boot_est = {}
-        self.boot_est['sample_statistic'] = statistic
-        self.boot_est['mean'] = np.mean(statistic, axis=0)
-        self.boot_est['std_err'] = np.std(statistic, ddof=1, axis=0)
+
+        result = {}
+        result['estimates'] = boot_est
+        result['est_mean'] = np.mean(boot_est, axis=0)
+        result['est_err'] = np.std(boot_est, ddof=1, axis=0)
 
     def plot_hist(self):
         plt.title(f"""Histogram of Sample {self.stat_name}""")
