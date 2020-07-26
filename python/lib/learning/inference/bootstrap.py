@@ -35,7 +35,8 @@ class Boot:
     def empirical_bootstrap(self, pop_data: np.ndarray, n = None, B = 1000, func=None):
         """returns the sample statistic from empirical bootstrap method
         Args:
-        pop_data: the data from which we sample with replacement
+        pop_data: the data from which we sample with replacement 
+                    shape = (n_samples,)
         n:        the size of the subsample, if None, then uses length of data
         B:        the number of bootstrap subsamples
         func:     the statistc we are interested
@@ -97,8 +98,8 @@ class Boot:
             index += 1
         self.boot_est = {}
         self.boot_est['sample_statistic'] = statistic
-
-
+        self.boot_est['mean'] = np.mean(statistic, axis=0)
+        self.boot_est['std_err'] = np.std(statistic, ddof=1, axis=0)
 
     def plot_hist(self):
         plt.title(f"""Histogram of Sample {self.stat_name}""")
