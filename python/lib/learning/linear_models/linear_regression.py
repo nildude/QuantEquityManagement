@@ -39,8 +39,10 @@ class LinearRegression(LinearBase):
         solve Mx = y.  Leting M = U'U, we solve this by forward/backward sub
     """
 
-    def __init__(self, fit_intercept: bool=True):
+    def __init__(self, fit_intercept: bool=True, degree: int=1):
         self.fit_intercept = fit_intercept
+        self.run = False
+        self.degree = degree
     
     def estimate_params(self, A: np.ndarray, b: np.ndarray, method: str='ols-qr') -> np.ndarray:
         """numerically solves Ax = b where x is the parameters to be determined
@@ -88,7 +90,7 @@ class LinearRegression(LinearBase):
         object
         """
         n_samples, p_features = X.shape[0], X.shape[1]
-        X = self.make_constant(X)
+        X = self.make_polynomial(X)
         if method == 'ols-naive':
             self.theta = np.linalg.inv(X.T @ X) @ X.T @ y
         elif method == 'ols':
@@ -112,6 +114,7 @@ class LinearRegression(LinearBase):
         self.r2 = self.ess / self.tss
         if covar: 
             self.param_covar = self._param_covar(X)
+        self.run = True
         return self
 
     def predict(self, X: np.ndarray, thetas: Union[np.ndarray, None] = None) -> np.ndarray:
@@ -166,6 +169,7 @@ class LinearRegressionMLE(LinearBase):
 
     def __init__(self, fit_intercept: bool=True):
         self.fit_intercept = fit_intercept
+        self.run = False
 
     def _loglikelihood(self, true, guess):
         error = true - guess
@@ -225,7 +229,7 @@ class LinearRegressionMLE(LinearBase):
         """
         
         
-        X = self.make_constant(X)
+        X = self.make_polynomial(X)
         # generate random guess
         rng = np.random.RandomState(1)
         guess_params = rng.uniform(low=0, high=10, size=X.shape[1])
@@ -239,6 +243,7 @@ class LinearRegressionMLE(LinearBase):
                 jac=self._jacobian, hess=self._hessian,
                 method='Newton-CG', options={'disp': True}, args=(X, y))
         self.predictions = self.predict(X)
+        self.run = True
         return self
 
     def predict(self, X: np.ndarray,
@@ -292,6 +297,7 @@ class LinearRegressionGD(LinearBase):
         self.n_iter = n_iter
         self.random_state = random_state
         self.fit_intercept = fit_intercept
+        self.run = False
     
     def fit(self, X: np.ndarray, y: np.ndarray) -> 'LinearRegressionGD':
         """fits training data
@@ -309,13 +315,14 @@ class LinearRegressionGD(LinearBase):
         n_samples, p_features = X.shape[0], X.shape[1]
         self.theta = np.zeros(shape = 1 + p_features)
         self.cost = []
-        X = self.make_constant(X)
+        X = self.make_polynomial(X)
 
         for _ in range(self.n_iter):
             # calculate the error
             error = (y - self.predict(X))
             self.theta += self.eta * X.T @ error / n_samples
             self.cost.append((error.T @ error) / (2.0 * n_samples))
+        self.run = True
         return self
 
 
