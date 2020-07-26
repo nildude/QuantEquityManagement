@@ -53,7 +53,7 @@ class Boot:
         self.stat_name = func.__name__
         return (mean, std_err)
     
-    def residual_bootstrap(self, X: np.ndarray, n=None, B=1000, model=None):
+    def residual_bootstrap(self, X: np.ndarray, y: np.ndarray, n=None, B=1000, model=None):
         """computes standard error from regression model using residual bootstrapping
         Args:
         X:      coefficient matrix, (n_samples, p_features)
@@ -67,22 +67,22 @@ class Boot:
         Returns: 
         standard error of coefficient estimates
         """
-        residuals = model.residuals[:, np.newaxis]
-        predictions = model.predictions[:, np.newaxis] 
-        pop_data = np.concatenate((predictions, residuals), axis=1)
+        model.fit(X, y);
+        resid = model.residuals
+        pred = model.predictions
         statistic = [None] * B
         self.boot_est = {}  # to store the mean, std_err
-        idx = 0   # lcv
-        for sub_sample in self._SubSample(pop_data, n, B):
-            boot_yi = sub_sample[:, 0] + sub_sample[:, 1]
+        index = 0   
+        for _ in range(B):
+            idx = np.random.randint(low=0, high=n, size=n)
+            boot_yi = pred[idx] + resid[idx]
             model.fit(X, boot_yi)
-            statistic[idx] = tuple(model.theta)
-            idx += 1
-        self.boot_est['mean'] = np.mean(statistic, axis=0)
-        self.boot_est['std_err'] = np.std(statistic, ddof=1, axis=0)
+            statistic[index] = tuple(model.theta)
+            index += 1
+    
+        #self.boot_est['std_err'] = np.std(statistic, ddof=1, axis=0)
         self.boot_est['sample_statistic'] = statistic 
         self.stat_name = 'residual_bootstrap method'
-        return self.boot_est['std_err']
     
     def regression_bootstrap(self, X: np.ndarray, y: np.ndarray, n=None, B=1000, model=None):
         """computes empirical bootstrap for regression problem"""
