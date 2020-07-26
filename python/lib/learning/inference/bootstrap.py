@@ -29,33 +29,6 @@ class Boot:
         - Regress bootstrapped yi values on fixed X values to obtain bootstrapped
             regression coefficients
     """
-    class _SubSample:
-        """Class performs random sample with replacement for each bootstap 
-            sample from population data
-
-            Args: 
-            pop_sample:     the population sample
-            sample_size:    the size of the subsample, if None, uses the length of data
-            bsize:          the number of bootstrap subsamples to create
-
-            Returns: 
-            iterator of population subsample
-
-        """ 
-        def __init__(self, pop_sample: np.ndarray, sample_size: np.ndarray, bsize: int):
-            self.pop_sample = pop_sample
-            self.sample_size = sample_size 
-            self.bsize = bsize
-        
-        def __iter__(self):
-            yield from self.make_sample()
-        
-        def make_sample(self):
-            n = self.pop_sample.shape[0] if self.sample_size is None else self.sample_size 
-            for _ in range(self.bsize):
-                yield self.pop_sample[np.random.randint(low=0, high=n, size=n)]
-
-    # beginning of Boot definition
     def __init__(self):
         pass 
         
@@ -71,8 +44,9 @@ class Boot:
         bootstrapped estimate of the sample statistic
         """
         statistic = []
-        for sub_sample in self._SubSample(pop_data, n, B):
-            sub_stat = func(sub_sample, axis=0)[0]
+        for _ in range(B):
+            idx = np.random.randint(low=0, high=n, size=n)
+            sub_stat = func(pop_data[idx], axis=0)
             statistic.append(sub_stat)
         mean = np.mean(statistic)
         std_err = np.std(statistic, ddof=1)
@@ -80,7 +54,7 @@ class Boot:
         self.stat_name = func.__name__
         return (mean, std_err)
     
-    def bootstrap_regression(self, X: np.ndarray, n=None, B=1000, model=None):
+    def residual_bootstrap(self, X: np.ndarray, n=None, B=1000, model=None):
         """computes standard error from regression model using residual bootstrapping
         Args:
         X:      coefficient matrix, (n_samples, p_features)
@@ -94,8 +68,8 @@ class Boot:
         Returns: 
         standard error of coefficient estimates
         """
-        residuals = model.residuals
-        predictions = model.predictions 
+        residuals = model.residuals[:, np.newaxis]
+        predictions = model.predictions[:, np.newaxis] 
         pop_data = np.concatenate((predictions, residuals), axis=1)
         statistic = [None] * B
         self.boot_est = {}  # to store the mean, std_err
@@ -106,10 +80,25 @@ class Boot:
             statistic[idx] = tuple(model.theta)
             idx += 1
         self.boot_est['mean'] = np.mean(statistic, axis=0)
-        self.boot_est['std_err'] = np.std(statistic, ddof=1)
+        self.boot_est['std_err'] = np.std(statistic, ddof=1, axis=0)
         self.boot_est['sample_statistic'] = statistic 
         self.stat_name = 'residual_bootstrap method'
-        return boot_est['std_err']
+        return self.boot_est['std_err']
+    
+    def regression_bootstrap(self, X: np.ndarray, y: np.ndarray, n=None, B=1000, model=None):
+        """computes empirical bootstrap for regression problem"""
+        thetas = model.theta
+        statistic = [None] * B
+        index = 0
+        for _ in range(B):
+            idx = np.random.randint(low=0, high=n, size=n)
+            model.fit(X[idx], y[idx]);
+            statistic[index] = tuple(model.theta)
+            index += 1
+        self.boot_est = {}
+        self.boot_est['sample_statistic'] = statistic
+
+
 
     def plot_hist(self):
         plt.title(f"""Histogram of Sample {self.stat_name}""")
