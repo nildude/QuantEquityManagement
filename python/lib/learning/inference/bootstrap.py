@@ -55,6 +55,7 @@ class Boot:
     
     def residual_bootstrap(self, X: np.ndarray, y: np.ndarray, n=None, B=1000, model=None):
         """computes standard error from regression model using residual bootstrapping
+            - use only if residuals have no heteroscedacity or autocorrelation
         Args:
         X:      coefficient matrix, (n_samples, p_features)
                 n_samples is number of instances i.e rows
@@ -75,7 +76,7 @@ class Boot:
         index = 0   
         for _ in range(B):
             idx = np.random.randint(low=0, high=n, size=n)
-            boot_yi = pred[idx] + resid[idx]
+            boot_yi = pred + resid[idx]
             model.fit(X, boot_yi)
             statistic[index] = tuple(model.theta)
             index += 1
@@ -85,7 +86,18 @@ class Boot:
         self.stat_name = 'residual_bootstrap method'
     
     def regression_bootstrap(self, X: np.ndarray, y: np.ndarray, n=None, B=1000, model=None):
-        """computes empirical bootstrap for regression problem"""
+        """computes empirical bootstrap for regression problem
+        Args:
+        X:      coefficient matrix, (n_samples, p_features)
+                n_samples is number of instances i.e rows
+                p_features is number of features i.e columns
+
+        y:      the response, shape = (n_samples,)
+        n:      the size of the subsample, if None, then use length of data
+        B:      the number of bootstrap
+        model:  the regression model object
+        """
+        model.fit(X, y);
         thetas = model.theta
         statistic = [None] * B
         index = 0
