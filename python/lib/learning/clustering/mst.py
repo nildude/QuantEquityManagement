@@ -341,7 +341,8 @@ class MinimumSpanningTrees:
         g.add_weighted_edges_from(items)
         nx.draw(g, with_labels=True);
         plt.draw();
-    
+
+
 
 
         
