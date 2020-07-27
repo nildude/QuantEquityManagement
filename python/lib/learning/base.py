@@ -6,6 +6,7 @@ from sklearn.datasets import make_regression
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.preprocessing import PolynomialFeatures
+from operator import itemgetter
 
 class LinearBase(metaclass=ABCMeta):
     """Abstract Base class representing the Linear Model"""
@@ -25,22 +26,23 @@ class LinearBase(metaclass=ABCMeta):
             noise = 5, coef=True)
         return dict(zip(['X','y','coef'], [features, output, coef]))
     
-    def make_constant(self, X: np.ndarray) -> np.ndarray: 
+    def make_constant(self, X: np.ndarray) -> np.ndarray:
+        raise DeprecationWarning("function deprecated -- use make_polynomial instead")
         if self.fit_intercept: 
             ones = np.ones(shape=(X.shape[0], 1))
             return np.concatenate((ones, X), axis=1)
         return X
     
     def make_polynomial(self, X: np.ndarray) -> np.ndarray: 
-        degree = self.degree 
-        if self.fit_intercept:
-            pf = PolynomialFeatures(degree=degree, include_bias=True)
-            return pf.fit_transform(X)
-        pf = PolynomialFeatures(degree=degree, include_bias=False)
+        degree, bias = self.degree, self.fit_intercept 
+        pf = PolynomialFeatures(degree=degree, include_bias=bias)
         return pf.fit_transform(X)
 
-    def reg_plot(self,x,y):
+    def reg_plot(self, X, y):
         plt.figure(figsize=(10,6))
-        plt.scatter(x, y)
-        plt.plot(x, self.predictions, color='red', lw=2)
+        plt.scatter(X, y)
+        # sort by design matrix -- needed for matplotlib
+        sorted_values = iter(sorted(zip(X.flatten(), self.predictions), key=itemgetter(0)))
+        X, pred = zip(*sorted_values)
+        plt.plot(X, pred,'m-')
         plt.title("Regression Plot")
