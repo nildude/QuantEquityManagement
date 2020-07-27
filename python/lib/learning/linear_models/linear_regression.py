@@ -115,6 +115,7 @@ class LinearRegression(LinearBase):
         if covar: 
             self.param_covar = self._param_covar(X)
         self.run = True
+        self.X = X
         return self
 
     def predict(self, X: np.ndarray, thetas: Union[np.ndarray, None] = None) -> np.ndarray:
