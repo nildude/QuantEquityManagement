@@ -8,7 +8,6 @@ from scipy.optimize import minimize
 from learning.base import LinearBase
 from typing import Dict
 
-
 class LogisticRegression(LinearBase):
     """
     Implements Logistic Regression via nls
@@ -26,7 +25,6 @@ class LogisticRegression(LinearBase):
     - A implemention using Newton's Method is given
     - A implemention using Stochastic Gradient Descent is given
     """
-
     def __init__(self, fit_intercept: bool=True):
         self.fit_intercept = fit_intercept
     
