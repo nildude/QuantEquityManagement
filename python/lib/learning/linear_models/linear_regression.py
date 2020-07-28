@@ -41,8 +41,8 @@ class LinearRegression(LinearBase):
 
     def __init__(self, fit_intercept: bool=True, degree: int=1):
         self.fit_intercept = fit_intercept
-        self.run = False
         self.degree = degree
+        self.run = False
     
     def estimate_params(self, A: np.ndarray, b: np.ndarray, method: str='ols-qr') -> np.ndarray:
         """numerically solves Ax = b where x is the parameters to be determined
@@ -115,7 +115,6 @@ class LinearRegression(LinearBase):
         if covar: 
             self.param_covar = self._param_covar(X)
         self.run = True
-        self.X = X
         return self
 
     def predict(self, X: np.ndarray, thetas: Union[np.ndarray, None] = None) -> np.ndarray:
@@ -167,9 +166,9 @@ class LinearRegressionMLE(LinearBase):
     - Levenberg-Marquardt Algorithm
 
     """
-
-    def __init__(self, fit_intercept: bool=True):
+    def __init__(self, fit_intercept: bool=True, degree: int=1):
         self.fit_intercept = fit_intercept
+        self.degree = degree
         self.run = False
 
     def _loglikelihood(self, true, guess):
@@ -228,8 +227,6 @@ class LinearRegressionMLE(LinearBase):
         Returns:
         object
         """
-        
-        
         X = self.make_polynomial(X)
         # generate random guess
         rng = np.random.RandomState(1)
@@ -293,11 +290,12 @@ class LinearRegressionGD(LinearBase):
        residuals:       Number of incorrect predictions
     """
     def __init__(self, eta: float = 0.001, n_iter: int = 20, random_state: int = 1,
-    fit_intercept: bool = True):
+    fit_intercept: bool = True, degree: int=1):
         self.eta = eta
         self.n_iter = n_iter
         self.random_state = random_state
         self.fit_intercept = fit_intercept
+        self.degree = degree
         self.run = False
     
     def fit(self, X: np.ndarray, y: np.ndarray) -> 'LinearRegressionGD':
@@ -325,7 +323,6 @@ class LinearRegressionGD(LinearBase):
             self.cost.append((error.T @ error) / (2.0 * n_samples))
         self.run = True
         return self
-
 
     def predict(self, X: np.ndarray, thetas: Union[np.ndarray, None] = None) -> np.ndarray:
         if thetas is None: 
