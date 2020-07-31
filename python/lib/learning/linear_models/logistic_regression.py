@@ -26,7 +26,7 @@ class LogisticRegression(LinearBase):
     - A implemention using Newton's Method is given
     - A implemention using Stochastic Gradient Descent is given
     """
-    def __init__(self, fit_intercept: bool =True, degree: int = 1):
+    def __init__(self, fit_intercept: bool = True, degree: int = 1):
         self.fit_intercept = fit_intercept
         self.degree = degree
         self.run = False
@@ -53,38 +53,42 @@ class LogisticRegression(LinearBase):
         """
         return self.sigm(z) * (1 - self.sigm(z))
 
-    def _gradient(self,
+    def _jacobian(self,
                   guess: np.ndarray,
                   X: np.ndarray,
                   y: np.ndarray
-                  ) -> np.ndarray:
-        """Computes the gradient of likelihood function
+                  ):
+        """Computes the jacobian of likelihood function
 
         Args:
             guess (np.ndarray): the initial guess for optimizer
-            X (np.ndarray): design matrix, shape = (n_samples, n_features)
-            y (np.ndarray): response variable, shape = (n_samples,)
+            X (np.ndarray): design matrix
+                            shape = (n_samples, n_features)
+            y (np.ndarray): response variable
+                            shape = (n_samples,)
 
         Returns:
             [np.ndarray]: first partial derivatives wrt weights
         """
-        z = self.net_input(X, thetas=guess)
-        return X.T @ (y - self.sigm(z))
+        predictions = self.predict(X, guess)
+        return -1*(X.T @ (y - predictions))
 
     def _hessian(self,
                  guess: np.ndarray,
                  X: np.ndarray,
                  y: np.ndarray
-                 ) -> np.ndarray:
+                 ):
         """computes the hessian wrt weights
 
         Args:
             guess (np.ndarray): initial guess for optimizer
-            X (np.ndarray): design matrix, shape = (n_samples, n_features)
-            y (np.ndarray): response variable, shape = (n_samples,)
+            X (np.ndarray): design matrix
+                            shape = (n_samples, n_features)
+            y (np.ndarray): response variable
+                            shape = (n_samples,)
 
         Returns:
-            np.ndarray: Hessian wrt weights
+            np.ndarray: second partial derivatives wrt weights
         """
         z = self.net_input(X, thetas=guess)
         prob = self.sigm_prime(z)
@@ -97,8 +101,10 @@ class LogisticRegression(LinearBase):
         """returns the loglikelihood function of logistic regression
 
         Args:
-            y (np.ndarray): response variable, shape = (n_samples,)
+            y (np.ndarray): response variable
+                            shape = (n_samples,)
             z (np.ndarray): result of net input function
+                            shape = (n_samples,)
 
         Returns:
             np.ndarray: loglikelihood function
@@ -110,21 +116,22 @@ class LogisticRegression(LinearBase):
 
         Args:
             guess (np.ndarray): initial guess for optimization
-            X (np.ndarray): design matrix, {n_samples, p_features}
-            y (np.ndarray): the response variable, {n_samples,}
+            X (np.ndarray): design matrix
+                            shape = {n_samples, p_features}
+            y (np.ndarray): the response variable
+                            shape = {n_samples,}
 
         Returns:
             float: value from loglikelihood function
         """
         # z = X @ theta
-        z = self.net_input(X, guess=guess)
+        z = self.net_input(X, thetas=guess)
         f = self._loglikelihood(y, z)
-        return f
+        return -f
 
     def fit(self,
             X: np.ndarray,
             y: np.ndarray,
-            method: str = ''
             ) -> 'LogisticRegression':
         """fits model to training data and returns regression coefficients
         Args:
@@ -133,16 +140,23 @@ class LogisticRegression(LinearBase):
             n_samples is number of instances i.e rows
             p_features is number of features i.e columns
         y:
-            shape = (n_samples)
+            shape = (n_samples,)
             Target values
-
-        method:
-            for now none
 
         Returns:
         object
         """
-        pass
+        X = self.make_polynomial(X)
+        # generate random guess
+        guess_params = np.mean(X, axis=0)
+        self.theta = minimize(self._objective_func,
+                              guess_params,
+                              jac=self._jacobian,
+                              hess=self._hessian,
+                              method='BFGS',
+                              options={'disp': True},
+                              args=(X, y))['x']
+        return self
 
     def net_input(self, X: np.ndarray, thetas: np.ndarray) -> np.ndarray:
         """Computes linear transformation X*theta
@@ -167,7 +181,7 @@ class LogisticRegression(LinearBase):
         Args:
             X (np.ndarray): design matrix
             shape = {n_samples, p_features}
-            thetas (np.ndarray, optional): estimated weights from from fitting
+            thetas (np.ndarray, optional): estimated weights from fitting
             Defaults to None.
             shape = {p_features + intercept,}
 
