@@ -51,14 +51,15 @@ class LogisticRegression(LinearBase):
         Returns:
             np.ndarray: the first derivative of sigmoid function
         """
-        return self.sigmoid(z) * (1 - self.sigmoid(z))
+        return self.sigm(z) * (1 - self.sigm(z))
 
-    def _jacobian(self,
+    def _gradient(self,
                   guess: np.ndarray,
                   X: np.ndarray,
                   y: np.ndarray
                   ) -> np.ndarray:
-        """Computes the jacobian
+        """Computes the gradient of likelihood function
+
         Args:
             guess (np.ndarray): the initial guess for optimizer
             X (np.ndarray): design matrix, shape = (n_samples, n_features)
@@ -67,7 +68,8 @@ class LogisticRegression(LinearBase):
         Returns:
             [np.ndarray]: first partial derivatives wrt weights
         """
-        return X @ (y - self.sigmoid(guess))
+        z = self.net_input(X, thetas=guess)
+        return X.T @ (y - self.sigm(z))
 
     def _hessian(self,
                  guess: np.ndarray,
@@ -84,7 +86,12 @@ class LogisticRegression(LinearBase):
         Returns:
             np.ndarray: Hessian wrt weights
         """
-        pass
+        z = self.net_input(X, thetas=guess)
+        prob = self.sigm_prime(z)
+        n = prob.shape[0]
+        W = np.zeros((n, n))
+        np.fill_diagonal(W, prob)
+        return X.T @ W @ X
 
     def _loglikelihood(self, y, z):
         """returns the loglikelihood function of logistic regression
@@ -99,26 +106,26 @@ class LogisticRegression(LinearBase):
         return y @ z - np.log(1 + np.exp(z)).sum()
 
     def _objective_func(self, guess: np.ndarray, X: np.ndarray, y: np.ndarray):
-        """the objective function to be minimized, returns weights
-        Args:
-        guess:
-            initial guess for optimization
-            shape = {1, p_features}
-            p_features is the numnber of columns of design matrix X
+        """the objective function to be minimized
 
-        X:
-            the design matrix
-            shape = {n_samples, n_features}
+        Args:
+            guess (np.ndarray): initial guess for optimization
+            X (np.ndarray): design matrix, {n_samples, p_features}
+            y (np.ndarray): the response variable, {n_samples,}
 
         Returns:
-        Scalar value from loglikelihood function
+            float: value from loglikelihood function
         """
         # z = X @ theta
-        z = self.predict(X, guess=guess)
+        z = self.net_input(X, guess=guess)
         f = self._loglikelihood(y, z)
         return f
 
-    def fit(self, X: np.ndarray, y: np.ndarray, method: str='') -> 'LogisticRegression':
+    def fit(self,
+            X: np.ndarray,
+            y: np.ndarray,
+            method: str = ''
+            ) -> 'LogisticRegression':
         """fits model to training data and returns regression coefficients
         Args:
         X:
@@ -129,7 +136,7 @@ class LogisticRegression(LinearBase):
             shape = (n_samples)
             Target values
 
-        method: 
+        method:
             for now none
 
         Returns:
@@ -141,11 +148,13 @@ class LogisticRegression(LinearBase):
         """Computes linear transformation X*theta
 
         Args:
-            X : the coefficient matrix
-            thetas : the initial weights of logistic function
+            X (np.ndarray): design matrix,
+            shape = {n_samples, p_features}
+            thetas (np.ndarray): weights of logistic function
+            shape = {p_features + intercept}
 
         Returns:
-            the linear transformation
+            np.ndarray: linear transformation
         """
         return X @ thetas
 
@@ -153,25 +162,22 @@ class LogisticRegression(LinearBase):
                 X: np.ndarray,
                 thetas: np.ndarray = None,
                 ) -> Union[np.ndarray, Dict]:
-        """makes predictions of response variable given input params
+        """Makes predictions of probabilities
+
         Args:
-        X:
-            shape = (n_samples, p_features)
-            n_samples is number of instances
-            p_features is number of features
-        thetas:
-            if initialized to None:
-                uses estimated theta from fitting process
-            if array is given:
-                it serves as initial guess for optimization
+            X (np.ndarray): design matrix
+            shape = {n_samples, p_features}
+            thetas (np.ndarray, optional): estimated weights from from fitting
+            Defaults to None.
+            shape = {p_features + intercept,}
 
         Returns:
-        predicted values:
-            shape = (n_samples, 1)
+            Union[np.ndarray, Dict]: predicted probabilities
+            shape = {n_samples,}
         """
         if thetas is None:
             if isinstance(self.theta, np.ndarray):
-                return self.net_input(X, self.theta)
+                return self.sigm(self.net_input(X, self.theta))
             else:
-                return self.net_input(X, self.theta['x'])
-            return self.net_input(X, thetas)
+                return self.sigm(self.net_input(X, self.theta['x']))
+        return self.sigm(self.net_input(X, thetas))
