@@ -191,7 +191,6 @@ class LogisticRegression(LinearBase):
             count += 1
         return xnew
 
-
     def net_input(self, X: np.ndarray, thetas: np.ndarray) -> np.ndarray:
         """Computes linear transformation X*theta
 
@@ -230,4 +229,136 @@ class LogisticRegression(LinearBase):
                 return self.sigm(self.net_input(X, self.theta['x']))
         return self.sigm(self.net_input(X, thetas))
 
+
+class LogisticRegressionGD(LinearBase):
+    """Implements Logistic Regression via Gradient Descent
+       
+       Args:
+       eta:             Learning rate (between 0.0 and 1.0)
+       n_iter:          passees over the training set
+       random_state:    Random Number Generator seed
+                        for random weight initilization
+
+       Attributes:
+       theta:           Weights after fitting
+       residuals:       Number of incorrect predictions
+    """
+    def __init__(self,
+                 eta: float = 0.001,
+                 n_iter: int = 20,
+                 random_state: int = 1,
+                 fit_intercept: bool = True,
+                 degree: int = 1):
+        self.eta = eta
+        self.n_iter = n_iter
+        self.random_state = random_state
+        self.fit_intercept = fit_intercept
+        self.degree = degree
+        self.run = False
+   
+    def fit(self, X: np.ndarray, y: np.ndarray) -> 'LogisticRegressionGD':
+        """fits training data
+        Args:
+        X: shape = {n_samples, p_features}
+                    n_samples is number of instances i.e rows
+                    p_features is number of features (the dimension of dataset)
+
+        y: shape = {n_samples,}
+                    Target values      
+        Returns:
+        object
+        """
+        n_samples, p_features = X.shape[0], X.shape[1]
+        self.theta = np.zeros(shape=1 + p_features)
+        self.cost = []
+        X = self.make_polynomial(X)
+
+        for _ in range(self.n_iter):
+            z = self.net_input(X, self.theta)
+            self.theta += self.eta * self._jacobian(self.theta, X, y)
+            self.cost.append(self._cost(y, z) / n_samples)
+        self.run = True
+        return self
+    
+    def _jacobian(self,
+                  guess: np.ndarray,
+                  X: np.ndarray,
+                  y: np.ndarray
+                  ):
+        """Computes the jacobian of likelihood function
+
+        Args:
+            guess (np.ndarray): the initial guess for optimizer
+            X (np.ndarray): design matrix
+                            shape = (n_samples, n_features)
+            y (np.ndarray): response variable
+                            shape = (n_samples,)
+
+        Returns:
+            [np.ndarray]: first partial derivatives wrt weights
+        """
+        predictions = self.predict(X, guess)
+        return (X.T @ (y - predictions))
+  
+    def _cost(self, y, z):
+        """computes cost of likelihood function
+
+        Args:
+            y (np.ndarray): response variable
+                            shape = (n_samples,)
+            z (np.ndarray): result of net input function
+                            shape = (n_samples,)
+
+        Returns:
+            np.ndarray: loglikelihood function
+        """
+        # direction is reversed since we are minimizng cost
+        return -1 * (y @ z - np.log(1 + np.exp(z)).sum())
+
+    def net_input(self, X: np.ndarray, thetas: np.ndarray) -> np.ndarray:
+        """Computes linear transformation X*theta
+
+        Args:
+            X (np.ndarray): design matrix,
+            shape = {n_samples, p_features}
+            thetas (np.ndarray): weights of logistic function
+            shape = {p_features + intercept}
+
+        Returns:
+            np.ndarray: linear transformation
+        """
+        return X @ thetas
+    
+    def sigm(self, z: np.ndarray) -> np.ndarray:
+        """Computes the sigmoid function
+
+        Args:
+            z (np.ndarray): input value from linear transformation
+
+        Returns:
+            np.ndarray: sigmoid function value
+        """
+        return 1.0 / (1 + np.exp(-z))
+
+    def predict(self,
+                X: np.ndarray,
+                thetas: np.ndarray = None,
+                ) -> Union[np.ndarray, Dict]:
+        """Makes predictions of probabilities
+
+        Args:
+            X (np.ndarray): design matrix
+            shape = {n_samples, p_features}
+            thetas (np.ndarray, optional): estimated weights from fitting
+            Defaults to None.
+            shape = {p_features + intercept,}
+
+        Returns:
+            Union[np.ndarray, Dict]: predicted probabilities
+            shape = {n_samples,}
+        """
+        if thetas is None:
+            if isinstance(self.theta, np.ndarray):
+                return self.sigm(self.net_input(X, self.theta))
+        return self.sigm(self.net_input(X, thetas))
 
