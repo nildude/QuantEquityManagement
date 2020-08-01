@@ -7,6 +7,7 @@ import numpy as np
 from scipy.optimize import minimize
 from learning.base import LinearBase
 from typing import Union, Dict
+from numpy.linalg import norm
 
 
 class LogisticRegression(LinearBase):
@@ -157,6 +158,39 @@ class LogisticRegression(LinearBase):
                               options={'disp': True},
                               args=(X, y))['x']
         return self
+    
+    def newton_system(self, X, y, func, jac, x, tol_approx=10E-9, tol_consec=10E-6):
+        """Solves N-dimensional newton's problem for F(x) = 0
+
+        Args:
+            func (function): given function evaluated at x
+            jac (function): jacobian of func as a function of x
+            x (np.ndarray): initial guess
+            tol_approx (float, optional): largest admissible value of ||F(x)||
+                                          when solution is found
+                                          Defaults to 10E-9.
+            tol_consec (float, optional): largest admissible distance between
+                                          two consecutive approximations when
+                                          solution is found
+                                          Defaults to 10E-6.
+        """
+        xnew, xold = x, x - 1
+        count = 0
+        while norm(xnew - xold, ord=2) > tol_consec or count > niter:
+            xold = xnew
+            z = self.net_input(X, thetas=xold)
+            predictions = self.predict(X, xold)
+            prob = self.sigm_prime(z)
+            n = prob.shape[0]
+            W = np.zeros((n, n))
+            Winv = np.zeros((n, n))
+            np.fill_diagonal(W, prob)
+            np.fill_diagonal(Winv, 1/prob)
+            zbar = X @ xold - Winv @ (y-predictions)
+            xnew = np.linalg.inv(X.T @ W @ X) @ X @ W @ zbar
+            count += 1
+        return xnew
+
 
     def net_input(self, X: np.ndarray, thetas: np.ndarray) -> np.ndarray:
         """Computes linear transformation X*theta
@@ -195,3 +229,5 @@ class LogisticRegression(LinearBase):
             else:
                 return self.sigm(self.net_input(X, self.theta['x']))
         return self.sigm(self.net_input(X, thetas))
+
+
